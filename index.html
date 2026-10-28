@@ -5,84 +5,75 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Deskline – ITSM</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <style>
-:root{--bg:#eceff2;--panel:#fff;--ink:#17202a;--mute:#66727f;--line:#d9dee3;--teal:#0e5a5f;--inc:#d9480f;--req:#1c6dd0;--ok:#2b8a3e;font-family:"Schibsted Grotesk",system-ui,sans-serif}
+:root{--bg:#f5f6fa;--ink:#1b1f3b;--mute:#7a8095;--line:#e6e8f0;--teal:#f26a1b;--inc:#e03131;--req:#4263eb;--ok:#2f9e44;--sh:0 2px 10px rgba(27,31,59,.06);font-family:"Plus Jakarta Sans",system-ui,sans-serif}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-size:14px}
-button,input,select,textarea{font:inherit;color:inherit}
-:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-.app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
-aside{background:var(--teal);color:#e6f2f2;padding:22px 18px;display:flex;flex-direction:column;gap:18px}
-.brand{font-size:22px;font-weight:800;letter-spacing:-.5px}.brand small{display:block;font-weight:400;font-size:12px;opacity:.7;letter-spacing:0}
-.site{display:block;width:100%;text-align:left;background:none;border:0;color:inherit;padding:9px 10px;border-radius:8px;cursor:pointer}
-.site:hover,.site.on{background:rgba(255,255,255,.14)}
-.site .row{display:flex;justify-content:space-between;font-weight:500}
-.bar{height:4px;background:rgba(255,255,255,.2);border-radius:2px;margin-top:6px}.bar i{display:block;height:100%;background:#ffd8a8;border-radius:2px}
-.me{margin-top:auto;font-size:12px;opacity:.8}.me button{background:none;border:0;color:#ffd8a8;cursor:pointer;padding:0;text-decoration:underline}
-main{padding:24px 28px;min-width:0}
-.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
-h1{margin:0;font-size:28px;letter-spacing:-.8px}
-.kpis{display:flex;gap:28px;margin:6px 0 0;color:var(--mute)}.kpis b{font-size:22px;color:var(--ink);margin-right:4px}.kpis .bad b{color:var(--inc)}
-.btn{border:1px solid var(--line);background:var(--panel);padding:9px 14px;border-radius:8px;cursor:pointer;font-weight:500}
-.btn.p{background:var(--ink);color:#fff;border-color:var(--ink)}.btn:hover{border-color:var(--ink)}
-.tools{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 12px;align-items:center}
-.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
-.seg button{border:0;background:none;padding:8px 14px;cursor:pointer}.seg button.on{background:var(--ink);color:#fff}
-.tools input,.tools select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--panel)}
-.tools input{flex:1;min-width:160px}
-.list{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.t{display:grid;grid-template-columns:6px 1fr auto;gap:14px;padding:13px 16px 13px 0;border-bottom:1px solid var(--line);cursor:pointer;align-items:center;width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left}
-.t:last-child{border-bottom:0}.t:hover{background:#f6f8f9}
-.t .k{align-self:stretch}.t.INC .k{background:var(--inc)}.t.REQ .k{background:var(--req)}
-.t h3{margin:0 0 3px;font-size:15px;font-weight:700}.meta{color:var(--mute);font-size:12.5px}
-.right{text-align:right;display:flex;flex-direction:column;gap:5px;align-items:flex-end}
-.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:500;background:#e9edf0}
+button,input,select,textarea{font:inherit;color:inherit}:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.app{display:grid;grid-template-columns:270px 1fr;min-height:100vh}
+aside{background:#fff;border-right:1px solid var(--line);padding:20px 16px;display:flex;flex-direction:column;gap:6px;position:sticky;top:0;height:100vh}
+.brand{display:flex;gap:10px;align-items:center;padding:4px 8px 18px}.logo{width:38px;height:38px;border-radius:11px;background:var(--teal);color:#fff;display:grid;place-items:center;font-weight:800;font-size:18px}.brand b{display:block;font-size:16px}.brand small{color:var(--mute);font-size:12px}
+.mod{font-size:12px;color:var(--mute);font-weight:600;padding:0 10px 4px}
+.nav{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;padding:8px 10px;border-radius:12px;cursor:pointer;font-weight:600;color:#3b4160;text-align:left}.nav:hover{background:var(--bg)}
+.nav.on{background:#fff1e8;color:var(--teal)}.ni{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:#f1f3f9}.nav.on .ni{background:var(--teal);color:#fff}
+.nav em{margin-left:auto;font-style:normal;font-size:12px;background:#ffe3d1;color:var(--teal);border-radius:99px;padding:1px 8px}
+.foot{margin-top:auto;display:grid;gap:8px}.user{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px}
+.av{width:34px;height:34px;border-radius:50%;background:var(--teal);color:#fff;display:grid;place-items:center;font-weight:700}.user small{display:block;color:var(--mute);font-size:12px}
+.bar{display:flex;gap:10px;align-items:center;padding:14px 28px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+.bar input,.bar select{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff}.bar input{width:min(340px,100%)}.sp{flex:1}
+.orange{background:var(--teal);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer}
+main{padding:26px 28px 40px}h1{margin:0;font-size:28px;letter-spacing:-.5px}.sub{color:var(--mute);margin-top:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:22px 0}
+.kpi,.panel{background:#fff;border-radius:18px;padding:20px;box-shadow:var(--sh)}
+.ico{width:46px;height:46px;border-radius:13px;color:#fff;display:grid;place-items:center}.num{font-size:34px;font-weight:800;margin:14px 0 2px;letter-spacing:-1px}.lab{color:var(--mute)}
+.chips{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}.chips span{font-size:12px;font-weight:600;background:#f1f3f9;border-radius:99px;padding:3px 10px}
+.panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:16px}.panel h3{margin:0 0 12px;font-size:16px}
+.br{display:grid;grid-template-columns:120px 1fr 28px;gap:10px;align-items:center;margin:10px 0}.tr{height:8px;background:#f1f3f9;border-radius:4px}.tr i{display:block;height:100%;border-radius:4px}.br b{text-align:right}
+.vh{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px;gap:12px;flex-wrap:wrap}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}.seg button{border:0;background:none;padding:8px 14px;cursor:pointer;font-weight:600}.seg button.on{background:var(--ink);color:#fff}
+.list{background:#fff;border-radius:18px;overflow:hidden;box-shadow:var(--sh)}
+.t{display:grid;grid-template-columns:6px 1fr auto;gap:14px;padding:13px 16px 13px 0;border:0;border-bottom:1px solid var(--line);cursor:pointer;align-items:center;width:100%;background:none;text-align:left}
+.t:last-child{border-bottom:0}.t:hover{background:#fafbfd}.t .k{align-self:stretch}.t.INC .k{background:var(--inc)}.t.REQ .k{background:var(--req)}
+.t h3{margin:0 0 3px;font-size:15px}.meta{color:var(--mute);font-size:12.5px;line-height:1.5}
+.right{display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:600;background:#e9edf0}
 .pill.open{background:#fff0e0;color:#9c4a00}.pill.in_progress{background:#e0edff;color:#14529c}.pill.resolved,.pill.closed{background:#e1f4e5;color:var(--ok)}
-.sla{font-size:12px;font-weight:700}.sla.late{color:var(--inc)}
-.empty{padding:48px;text-align:center;color:var(--mute)}
-dialog{border:0;border-radius:14px;padding:0;width:min(560px,94vw);box-shadow:0 20px 60px rgba(0,0,0,.3)}
-dialog::backdrop{background:rgba(23,32,42,.5)}
-.dlg{padding:24px;display:grid;gap:14px}.dlg h2{margin:0;font-size:20px}
-label{display:grid;gap:5px;font-weight:500;font-size:13px}
-.dlg input,.dlg select,.dlg textarea{border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.type{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.type label{border:2px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;display:block}
-.type input{position:absolute;opacity:0}.type label:has(input:checked){border-color:var(--teal);background:#eef7f7}
-.type span{display:block;font-weight:400;color:var(--mute);font-size:12px;margin-top:3px}
+.sla{font-size:12px;font-weight:700}.sla.late{color:var(--inc)}.empty{padding:48px;text-align:center;color:var(--mute)}
+dialog{border:0;border-radius:16px;padding:0;width:min(560px,94vw);box-shadow:0 20px 60px rgba(0,0,0,.3)}dialog::backdrop{background:rgba(27,31,59,.5)}
+.dlg{padding:24px;display:grid;gap:14px}.dlg h2{margin:0;font-size:20px}label{display:grid;gap:5px;font-weight:600;font-size:13px}
+.dlg input,.dlg select,.dlg textarea{border:1px solid var(--line);border-radius:10px;padding:9px 10px;width:100%}
+.two,.type{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.type label{border:2px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;display:block}.type input{position:absolute;opacity:0}
+.type label:has(input:checked){border-color:var(--teal);background:#fff6ef}.type span{display:block;font-weight:400;color:var(--mute);font-size:12px;margin-top:3px}
 .acts{display:flex;justify-content:flex-end;gap:10px}.err{color:var(--inc);font-size:13px}
+.btn{border:1px solid var(--line);background:#fff;padding:9px 14px;border-radius:10px;cursor:pointer;font-weight:600}.btn.p{background:var(--ink);color:#fff;border-color:var(--ink)}
 dl{display:grid;grid-template-columns:110px 1fr;gap:8px 12px;margin:0}dt{color:var(--mute)}dd{margin:0}
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s}#toast.on{opacity:1}
-.banner{background:#fff4d6;border:1px solid #f0d37a;padding:8px 12px;border-radius:8px;margin-top:14px;font-size:13px}
-.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);width:100%}.tabs button{border:0;background:none;padding:10px 18px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;font-size:15px}.tabs button.on[data-v=INC]{border-color:var(--inc)}.tabs button.on[data-v=REQ]{border-color:var(--req)}.tabs span{font-weight:500;color:var(--mute);margin-left:4px}
-@media(max-width:800px){.app{grid-template-columns:1fr}aside{padding:14px}.sites{display:flex;gap:6px;overflow-x:auto}.site{min-width:130px}.me{display:none}main{padding:16px}.two{grid-template-columns:1fr}}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s}#toast.on{opacity:1}
+.banner{background:#fff4d6;border:1px solid #f0d37a;padding:8px 12px;border-radius:10px;margin:14px 28px 0;font-size:13px}
+@media(max-width:860px){.app{grid-template-columns:1fr}aside{position:static;height:auto}.bar,main{padding:14px}.two{grid-template-columns:1fr}.banner{margin:10px 14px 0}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
 <div class="app">
 <aside>
-  <div class="brand">Deskline<small>IT incidents and requests</small></div>
-  <div class="sites" id="sites" role="list"></div>
-  <div class="me" id="me"></div>
+  <div class="brand"><div class="logo">D</div><div><b>Deskline</b><small>IT service portal</small></div></div>
+  <div class="mod">Modules</div>
+  <nav id="nav"></nav>
+  <div class="foot"><button class="nav" id="out"><span class="ni">&#8617;</span>Sign out</button><div class="user" id="me"></div></div>
 </aside>
-<main>
-  <div class="top">
-    <div><h1 id="heading">All locations</h1><div class="kpis" id="kpis"></div></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <select class="btn" id="exp" aria-label="Export data"><option value="">Export data</option><option value="csv">Download CSV (Excel)</option><option value="csvall">Download CSV, incidents and requests</option><option value="json">Download JSON</option></select>
-      <button class="btn p" id="newBtn">New ticket</button>
-    </div>
-  </div>
+<section>
+  <header class="bar">
+    <input id="q" type="search" placeholder="Search tickets, users, assets, seats" aria-label="Search tickets">
+    <select id="siteSel" aria-label="Location"></select>
+    <span class="sp"></span>
+    <select id="exp" aria-label="Export data"><option value="">Export data</option><option value="csv">CSV of this tab (Excel)</option><option value="csvall">CSV of incidents and requests</option><option value="json">JSON of this tab</option></select>
+    <button class="orange" id="newBtn">+ New ticket</button>
+  </header>
   <div id="banner"></div>
-  <div class="tools">
-    <div class="tabs" id="typeSeg" role="tablist"><button data-v="INC" class="on" role="tab">Incidents<span id="cInc"></span></button><button data-v="REQ" role="tab">Service requests<span id="cReq"></span></button></div>
-    <select id="statusSel" aria-label="Status"><option value="open">Active</option><option value="all">Any status</option><option value="resolved">Resolved or closed</option></select>
-    <input id="q" type="search" placeholder="Search title, desk, requester" aria-label="Search tickets">
-  </div>
-  <div class="list" id="list"></div>
-</main>
+  <main id="view"></main>
+</section>
 </div>
 
 <dialog id="newDlg"><form class="dlg" id="newForm" method="dialog">
@@ -144,7 +135,9 @@ const SLA_H = { critical: 4, high: 8, medium: 24, low: 72 };
 const PRI = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
 const STAT = { open: "Open", in_progress: "In progress", resolved: "Resolved", closed: "Closed" };
 
+const TBL = "deskline_tickets";
 const demo = !CFG.url;
+let V = "dash", UN = "";
 let db = null, T = [], F = { type: "INC", status: "open", site: "all", q: "" };
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -174,7 +167,7 @@ function seed() {
 
 async function load() {
   if (demo) { T = seed(); return; }
-  const { data, error } = await db.from("tickets").select("*").order("created_at", { ascending: false });
+  const { data, error } = await db.from(TBL).select("*").order("created_at", { ascending: false });
   if (error) { toast("Could not load tickets: " + error.message); return; }
   T = data;
 }
@@ -188,20 +181,43 @@ function filtered(ignoreSite, anyType) {
     (!q || [t.title, t.spot, t.seat_no, t.asset_id, t.mobile, t.assignee, t.requester, t.category, code(t)].join(" ").toLowerCase().includes(q)));
 }
 
+const IC = { dash: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z", INC: "M13 2L3 14h9l-1 8 10-12h-9z", REQ: "M4 7h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z", SLA: "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z", up: "M3 17l6-6 4 4 8-8", usr: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 4-6 8-6s8 2 8 6" };
+const ic = k => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="${IC[k]}"/></svg>`;
+function showUser() { $("#me").innerHTML = `<div class="av">${esc(UN.charAt(0).toUpperCase())}</div><div><b>${esc(UN)}</b><small>Agent</small></div>`; }
+
+function rowHtml(t) {
+  const s = slaText(t);
+  return `<button class="t ${t.type}" data-id="${esc(t.id)}"><span class="k"></span><div><h3>${esc(t.title)}</h3><div class="meta">${code(t)}, ${esc(t.category || "General")}, ${esc(t.location)}${t.seat_no ? ", seat " + esc(t.seat_no) : ""}${t.asset_id ? ", asset " + esc(t.asset_id) : ""}</div><div class="meta">${esc(t.requester)}${t.mobile ? ", " + esc(t.mobile) : ""}, engineer: ${esc(t.assignee) || "unassigned"}</div></div><div class="right"><span class="pill ${t.status}">${STAT[t.status]}</span><span class="sla ${s.late ? "late" : ""}">${PRI[t.priority]}, ${s.s}</span></div></button>`;
+}
+const listHtml = a => a.length ? a.map(rowHtml).join("") : `<div class="empty">No tickets here yet. Choose New ticket to log one, or clear the search and filters.</div>`;
+const bars = r => r.map(x => `<div class="br"><span>${esc(x[0])}</span><div class="tr"><i style="width:${x[1] / Math.max(1, ...r.map(y => y[1])) * 100}%;background:${x[2]}"></i></div><b>${x[1]}</b></div>`).join("") || `<div class="meta">Nothing open right now.</div>`;
+const kpi = (color, icon, label, a) => `<div class="kpi"><div class="ico" style="background:${color}">${ic(icon)}</div><div class="num">${a.length}</div><div class="lab">${label}</div><div class="chips"><span>Incidents ${a.filter(t => t.type === "INC").length}</span><span>Requests ${a.filter(t => t.type === "REQ").length}</span></div></div>`;
+
 function render() {
-  const base = T.filter(isOpen), max = Math.max(1, ...SITES.map(s => base.filter(t => t.location === s).length));
-  $("#sites").innerHTML = `<button class="site ${F.site === "all" ? "on" : ""}" data-s="all"><div class="row"><span>All locations</span><span>${base.length}</span></div></button>` +
-    SITES.map(s => { const n = base.filter(t => t.location === s).length; return `<button class="site ${F.site === s ? "on" : ""}" data-s="${esc(s)}"><div class="row"><span>${esc(s)}</span><span>${n}</span></div><div class="bar"><i style="width:${n / max * 100}%"></i></div></button>`; }).join("");
-  $("#heading").textContent = F.site === "all" ? "All locations" : F.site;
-  const scope = T.filter(t => F.site === "all" || t.location === F.site), op = scope.filter(isOpen);
-  $("#cInc").textContent = op.filter(t => t.type === "INC").length; $("#cReq").textContent = op.filter(t => t.type === "REQ").length;
-  $("#kpis").innerHTML = `<span><b>${op.length}</b>open</span><span class="bad"><b>${op.filter(t => slaText(t).late).length}</b>overdue</span><span><b>${op.filter(t => t.type === "INC").length}</b>incidents</span><span><b>${op.filter(t => t.type === "REQ").length}</b>requests</span>`;
-  const rows = filtered();
-  $("#list").innerHTML = rows.length ? rows.map(t => { const s = slaText(t); return `<button class="t ${t.type}" data-id="${esc(t.id)}"><span class="k"></span><div><h3>${esc(t.title)}</h3><div class="meta">${code(t)}, ${esc(t.category || "General")}, ${esc(t.location)}${t.seat_no ? ", seat " + esc(t.seat_no) : ""}${t.asset_id ? ", asset " + esc(t.asset_id) : ""}</div><div class="meta">${esc(t.requester)}${t.mobile ? ", " + esc(t.mobile) : ""}, engineer: ${esc(t.assignee) || "unassigned"}</div></div><div class="right"><span class="pill ${t.status}">${STAT[t.status]}</span><span class="sla ${s.late ? "late" : ""}">${PRI[t.priority]}, ${s.s}</span></div></button>`; }).join("")
-    : `<div class="empty">No tickets match these filters. Clear the search or choose New ticket to log one.</div>`;
+  const scope = T.filter(t => F.site === "all" || t.location === F.site), op = scope.filter(isOpen), late = op.filter(t => slaText(t).late);
+  $("#nav").innerHTML = [["dash", "Dashboard"], ["INC", "Incidents"], ["REQ", "Service requests"], ["SLA", "SLA reports"]].map(([k, l]) =>
+    `<button class="nav ${V === k ? "on" : ""}" data-nav="${k}"><span class="ni">${ic(k)}</span>${l}${k === "INC" || k === "REQ" ? `<em>${op.filter(t => t.type === k).length}</em>` : k === "SLA" && late.length ? `<em>${late.length}</em>` : ""}</button>`).join("");
+  let h;
+  if (V === "dash") {
+    const hr = new Date().getHours(), eng = {};
+    op.forEach(t => { const k = t.assignee || "Unassigned"; eng[k] = (eng[k] || 0) + 1; });
+    h = `<h1>${hr < 12 ? "Good morning" : hr < 17 ? "Good afternoon" : "Good evening"}, ${esc(UN || "there")}</h1><div class="sub">Your IT overview for ${F.site === "all" ? "all locations" : esc(F.site)}</div>
+    <div class="grid">${kpi("#4c6ef5", "dash", "Total tickets", scope)}${kpi("#f76707", "INC", "Open", scope.filter(t => t.status === "open"))}${kpi("#7048e8", "up", "In progress", scope.filter(t => t.status === "in_progress"))}${kpi("#2f9e44", "REQ", "Resolved or closed", scope.filter(t => !isOpen(t)))}${kpi("#e03131", "SLA", "Overdue", late)}${kpi("#0c8599", "usr", "Not assigned", op.filter(t => !t.assignee))}</div>
+    <div class="panels"><div class="panel"><h3>Open by priority</h3>${bars(["critical", "high", "medium", "low"].map(p => [PRI[p], op.filter(t => t.priority === p).length, { critical: "#e03131", high: "#f76707", medium: "#f59f00", low: "#2f9e44" }[p]]))}</div>
+    <div class="panel"><h3>Open by location</h3>${bars(SITES.map(x => [x, op.filter(t => t.location === x).length, "#f26a1b"]))}</div>
+    <div class="panel"><h3>Engineer workload</h3>${bars(Object.entries(eng).map(([k, n]) => [k, n, "#4c6ef5"]))}</div></div>
+    <div class="panel"><h3>Latest open tickets</h3><div class="list" style="box-shadow:none;border:1px solid var(--line)">${listHtml(op.slice(0, 5))}</div></div>`;
+  } else if (V === "SLA") {
+    const rows = filtered(false, true).filter(isOpen).sort((a, b) => due(a) - due(b));
+    h = `<div class="vh"><div><h1>SLA reports</h1><div class="sub">${late.length} overdue out of ${op.length} open tickets. Closest to breach first.</div></div></div><div class="list">${listHtml(rows)}</div>`;
+  } else {
+    const rows = filtered();
+    h = `<div class="vh"><div><h1>${V === "INC" ? "Incidents" : "Service requests"}</h1><div class="sub">${rows.length} shown</div></div><div class="seg">${[["open", "Active"], ["resolved", "Resolved"], ["all", "All"]].map(([k, l]) => `<button data-st="${k}" class="${F.status === k ? "on" : ""}">${l}</button>`).join("")}</div></div><div class="list">${listHtml(rows)}</div>`;
+  }
+  $("#view").innerHTML = h;
 }
 
-function setTab(v) { F.type = v; document.querySelectorAll("#typeSeg button").forEach(b => b.classList.toggle("on", b.dataset.v === v)); }
+function setTab(v) { F.type = v; V = v; }
 
 function fillNewForm() {
   const f = $("#newForm"), type = f.type.value;
@@ -226,7 +242,7 @@ function openView(id) {
 
 async function saveView(id) {
   const patch = { status: $("#stSel").value, assignee: $("#asg").value.trim() };
-  if (!demo) { const { error } = await db.from("tickets").update(patch).eq("id", id); if (error) return toast("Save failed: " + error.message); }
+  if (!demo) { const { error } = await db.from(TBL).update(patch).eq("id", id); if (error) return toast("Save failed: " + error.message); }
   Object.assign(T.find(x => String(x.id) === id), patch);
   $("#viewDlg").close(); render(); toast("Changes saved");
 }
@@ -238,7 +254,7 @@ async function createTicket(e) {
   $("#saveNew").disabled = true; $("#newErr").textContent = "";
   if (demo) { T.unshift({ ...rec, id: "d" + Date.now(), number: T.length + 1, created_at: new Date().toISOString() }); }
   else {
-    const { data, error } = await db.from("tickets").insert(rec).select().single();
+    const { data, error } = await db.from(TBL).insert(rec).select().single();
     if (error) { $("#newErr").textContent = "Could not create ticket: " + error.message; $("#saveNew").disabled = false; return; }
     T.unshift(data);
   }
@@ -261,34 +277,35 @@ function save(name, mime, text) {
 }
 
 async function boot() {
+  $("#siteSel").innerHTML = '<option value="all">All locations</option>' + SITES.map(x => `<option>${esc(x)}</option>`).join("");
   $("#engs").innerHTML = ENGINEERS.map(e => `<option value="${esc(e)}">`).join("");
   if (demo) {
     $("#banner").innerHTML = `<div class="banner">Demo mode: data resets on refresh. Add your Supabase URL and anon key at the top of the script to save tickets permanently.</div>`;
-    $("#me").textContent = "Demo user";
+    UN = "Demo user"; showUser();
   } else {
     db = supabase.createClient(CFG.url, CFG.key);
     const { data: { session } } = await db.auth.getSession();
     if (!session) { $("#authDlg").showModal(); return; }
-    $("#me").innerHTML = esc(session.user.email) + ' <button id="out">Sign out</button>';
+    UN = session.user.email.split("@")[0]; showUser();
   }
   await load(); render();
 }
 
 document.addEventListener("click", e => {
   const c = e.target.closest("button"); if (!c) return;
-  if (c.dataset.s) { F.site = c.dataset.s; render(); }
-  else if (c.closest("#typeSeg")) { F.type = c.dataset.v; document.querySelectorAll("#typeSeg button").forEach(b => b.classList.toggle("on", b === c)); render(); }
+  if (c.dataset.nav) { V = c.dataset.nav; if (V === "INC" || V === "REQ") F.type = V; render(); }
+  else if (c.dataset.st) { F.status = c.dataset.st; render(); }
   else if (c.classList.contains("t")) openView(c.dataset.id);
   else if (c.id === "newBtn") { $("#newForm").type.value = F.type; fillNewForm(); $("#newDlg").showModal(); }
   else if (c.id === "cancelNew") $("#newDlg").close();
   else if (c.id === "closeView") $("#viewDlg").close();
   else if (c.id === "saveView") saveView(c.dataset.id);
-  else if (c.id === "out") db.auth.signOut().then(() => location.reload());
+  else if (c.id === "out") (db ? db.auth.signOut() : Promise.resolve()).then(() => location.reload());
   else if (c.id === "signUp") authDo("signUp");
 });
 $("#newForm").addEventListener("change", e => { if (e.target.name === "type") fillNewForm(); });
 $("#newForm").addEventListener("submit", createTicket);
-$("#statusSel").onchange = e => { F.status = e.target.value; render(); };
+$("#siteSel").onchange = e => { F.site = e.target.value; render(); };
 $("#q").oninput = e => { F.q = e.target.value; render(); };
 $("#exp").onchange = e => { if (e.target.value) exportData(e.target.value); e.target.value = ""; };
 $("#authForm").addEventListener("submit", e => { e.preventDefault(); authDo("signInWithPassword"); });
