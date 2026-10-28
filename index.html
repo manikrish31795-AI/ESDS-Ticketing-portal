@@ -51,6 +51,8 @@ dialog{border:0;border-radius:16px;padding:0;width:min(560px,94vw);box-shadow:0 
 dl{display:grid;grid-template-columns:110px 1fr;gap:8px 12px;margin:0}dt{color:var(--mute)}dd{margin:0}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s}#toast.on{opacity:1}
 .banner{background:#fff4d6;border:1px solid #f0d37a;padding:8px 12px;border-radius:10px;margin:14px 28px 0;font-size:13px}
+.tl{list-style:none;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:0;margin:0}.tl li{border-top:3px solid var(--line);padding-top:6px;font-size:12px}.tl li.done{border-color:var(--ok)}.tl b{display:block}.tl span{color:var(--mute)}
+.cm{background:var(--bg);border-radius:10px;padding:10px;margin-top:8px}.cm span{color:var(--mute);font-size:12px}.stars{display:flex;gap:6px}.star{font-size:30px;background:none;border:0;cursor:pointer;color:#ccd;padding:0}.star.on{color:#f59f00}
 @media(max-width:860px){.app{grid-template-columns:1fr}aside{position:static;height:auto}.bar,main{padding:14px}.two{grid-template-columns:1fr}.banner{margin:10px 14px 0}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -94,7 +96,7 @@ dl{display:grid;grid-template-columns:110px 1fr;gap:8px 12px;margin:0}dt{color:v
   </div>
   <div class="two">
     <label>Category<select name="category"></select></label>
-    <label>Priority<select name="priority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label>
+    <label>Priority<select name="priority"></select></label>
   </div>
   <div class="two">
     <label>User name<input name="requester" required></label>
@@ -102,7 +104,7 @@ dl{display:grid;grid-template-columns:110px 1fr;gap:8px 12px;margin:0}dt{color:v
   </div>
   <div class="two">
     <label>Email<input name="contact" type="email"></label>
-    <label>Assigned engineer<input name="assignee" list="engs" placeholder="Choose or type a name"></label>
+    <label>Auto-assigned engineer<input id="autoEng" disabled></label>
   </div>
   <div class="err" id="newErr"></div>
   <div class="acts"><button type="button" class="btn" id="cancelNew">Cancel</button><button class="btn p" id="saveNew" type="submit">Create ticket</button></div>
@@ -131,38 +133,47 @@ const CATS = {
   INC: ["Network", "Hardware", "Software", "Email", "Security", "Other"],
   REQ: ["New access", "New hardware", "Software install", "Move or change", "Other"]
 };
-const SLA_H = { critical: 4, high: 8, medium: 24, low: 72 };
-const PRI = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
+const SLA = { P1: [15, 240], P2: [30, 360], P3: [60, 720], P4: [0, 720], P5: [0, 1440] }; // [response min, resolution min]; 1 business day = 12 hrs
+const SLA_TXT = { P1: "respond 15 min, fix 4 hrs", P2: "respond 30 min, fix 6 hrs", P3: "respond 1 hr, fix 1 business day", P4: "fix 1 business day", P5: "fix 2 business days" };
+const PRI = { P1: "P1 Critical", P2: "P2 High", P3: "P3 Medium", P4: "P4 Standard", P5: "P5 Low" };
 const STAT = { open: "Open", in_progress: "In progress", resolved: "Resolved", closed: "Closed" };
 
 const TBL = "deskline_tickets";
 const demo = !CFG.url;
-let V = "dash", UN = "";
+let V = "dash", UN = "", ROLE = "user", MYLOC = "", STAFF = [], RATE = 0;
 let db = null, T = [], F = { type: "INC", status: "open", site: "all", q: "" };
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const code = t => (t.type === "INC" ? "INC-" : "REQ-") + String(t.number).padStart(4, "0");
 const isOpen = t => t.status === "open" || t.status === "in_progress";
-const due = t => new Date(t.created_at).getTime() + SLA_H[t.priority] * 36e5;
+const dueRes = t => new Date(t.created_at).getTime() + SLA[t.priority][1] * 6e4;
+const dueResp = t => SLA[t.priority][0] ? new Date(t.created_at).getTime() + SLA[t.priority][0] * 6e4 : 0;
+const due = dueRes;
+const fmtMin = m => m >= 1440 ? m / 720 + " business days" : m === 720 ? "1 business day" : m >= 60 ? m / 60 + (m === 60 ? " hr" : " hrs") : m + " min";
 
 function toast(m) { const e = $("#toast"); e.textContent = m; e.classList.add("on"); setTimeout(() => e.classList.remove("on"), 2200); }
 
+function dur(ms) { const h = Math.abs(ms) / 36e5; return h >= 24 ? Math.round(h / 24) + "d" : h >= 1 ? Math.round(h) + "h" : Math.round(h * 60) + "m"; }
 function slaText(t) {
-  if (!isOpen(t)) return { s: "Done", late: false };
-  const ms = due(t) - Date.now(), h = Math.abs(ms) / 36e5;
-  const txt = h >= 24 ? Math.round(h / 24) + "d" : h >= 1 ? Math.round(h) + "h" : Math.round(h * 60) + "m";
-  return ms < 0 ? { s: "Overdue " + txt, late: true } : { s: txt + " left", late: false };
+  if (t.status === "resolved" || t.status === "closed") { const late = new Date(t.resolved_at || t.closed_at || Date.now()).getTime() > dueRes(t); return { s: late ? "SLA breached" : "SLA met", late }; }
+  const ms = dueRes(t) - Date.now();
+  return ms < 0 ? { s: "Fix overdue " + dur(ms), late: true } : { s: dur(ms) + " to fix", late: false };
+}
+function slaLine(t) {
+  const r = dueResp(t);
+  if (r && t.status === "open" && !t.acknowledged_at) { const ms = r - Date.now(); return ms < 0 ? { s: "Response overdue " + dur(ms), late: true } : { s: "Respond in " + dur(ms), late: false }; }
+  return slaText(t);
 }
 
 function seed() {
   const now = Date.now(), H = 36e5;
   return [
-    ["INC", "Core switch dropping packets", "Nashik data centre", "Rack B4", "critical", "open", "Network", 3],
-    ["INC", "Outlook keeps asking for password", "Mumbai HQ", "2nd floor, desk 21", "medium", "in_progress", "Email", 20],
-    ["REQ", "VPN access for new joiner", "Chennai office", "Admin desk", "medium", "open", "New access", 6],
-    ["REQ", "Second monitor for finance team", "Mumbai HQ", "4th floor", "low", "open", "New hardware", 30],
-    ["INC", "Printer offline on 3rd floor", "Mumbai HQ", "3rd floor print room", "high", "resolved", "Hardware", 50]
-  ].map((r, i) => ({ id: "d" + i, number: i + 1, type: r[0], title: r[1], description: "", location: r[2], spot: r[3], priority: r[4], status: r[5], category: r[6], requester: "Demo user", mobile: "98765 43210", seat_no: "A-" + (10 + i), asset_id: "LAP-01" + (40 + i), contact: "", assignee: i % 2 ? "Engineer A" : "", created_at: new Date(now - r[7] * H).toISOString() }));
+    ["INC", "Core switch dropping packets", "Nashik data centre", "Rack B4", "P1", "open", "Network", 3],
+    ["INC", "Outlook keeps asking for password", "Mumbai HQ", "2nd floor, desk 21", "P3", "in_progress", "Email", 20],
+    ["REQ", "VPN access for new joiner", "Chennai office", "Admin desk", "P5", "open", "New access", 6],
+    ["REQ", "Second monitor for finance team", "Mumbai HQ", "4th floor", "P4", "open", "New hardware", 30],
+    ["INC", "Printer offline on 3rd floor", "Mumbai HQ", "3rd floor print room", "P2", "closed", "Hardware", 50]
+  ].map((r, i) => ({ id: "d" + i, number: i + 1, type: r[0], title: r[1], description: "", location: r[2], spot: r[3], priority: r[4], status: r[5], category: r[6], requester: "Demo user", mobile: "98765 43210", seat_no: "A-" + (10 + i), asset_id: "LAP-01" + (40 + i), contact: "", assignee: i % 2 ? "Engineer A" : "", acknowledged_at: r[5] === "open" ? null : new Date(now - 40 * H).toISOString(), resolved_at: r[5] === "closed" ? new Date(now - 3 * H).toISOString() : null, closed_at: r[5] === "closed" ? new Date(now - 2 * H).toISOString() : null, csat: null, csat_comment: "", comments: r[5] === "closed" ? [{ by: "Engineer A", text: "Replaced the toner and tested printing.", at: new Date(now - 3 * H).toISOString() }] : [], created_at: new Date(now - r[7] * H).toISOString() }));
 }
 
 async function load() {
@@ -182,28 +193,37 @@ function filtered(ignoreSite, anyType) {
 }
 
 const IC = { dash: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z", INC: "M13 2L3 14h9l-1 8 10-12h-9z", REQ: "M4 7h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z", SLA: "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z", up: "M3 17l6-6 4 4 8-8", usr: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 4-6 8-6s8 2 8 6" };
+IC.mine = IC.REQ;
 const ic = k => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="${IC[k]}"/></svg>`;
-function showUser() { $("#me").innerHTML = `<div class="av">${esc(UN.charAt(0).toUpperCase())}</div><div><b>${esc(UN)}</b><small>Agent</small></div>`; }
+function showUser() { $("#me").innerHTML = `<div class="av">${esc(UN.charAt(0).toUpperCase())}</div><div><b>${esc(UN)}</b><small>${ROLE === "admin" ? "Engineer" + (MYLOC ? ", " + esc(MYLOC) : "") : "User"}</small></div>`; }
 
 function rowHtml(t) {
-  const s = slaText(t);
+  const s = slaLine(t);
   return `<button class="t ${t.type}" data-id="${esc(t.id)}"><span class="k"></span><div><h3>${esc(t.title)}</h3><div class="meta">${code(t)}, ${esc(t.category || "General")}, ${esc(t.location)}${t.seat_no ? ", seat " + esc(t.seat_no) : ""}${t.asset_id ? ", asset " + esc(t.asset_id) : ""}</div><div class="meta">${esc(t.requester)}${t.mobile ? ", " + esc(t.mobile) : ""}, engineer: ${esc(t.assignee) || "unassigned"}</div></div><div class="right"><span class="pill ${t.status}">${STAT[t.status]}</span><span class="sla ${s.late ? "late" : ""}">${PRI[t.priority]}, ${s.s}</span></div></button>`;
 }
 const listHtml = a => a.length ? a.map(rowHtml).join("") : `<div class="empty">No tickets here yet. Choose New ticket to log one, or clear the search and filters.</div>`;
 const bars = r => r.map(x => `<div class="br"><span>${esc(x[0])}</span><div class="tr"><i style="width:${x[1] / Math.max(1, ...r.map(y => y[1])) * 100}%;background:${x[2]}"></i></div><b>${x[1]}</b></div>`).join("") || `<div class="meta">Nothing open right now.</div>`;
 const kpi = (color, icon, label, a) => `<div class="kpi"><div class="ico" style="background:${color}">${ic(icon)}</div><div class="num">${a.length}</div><div class="lab">${label}</div><div class="chips"><span>Incidents ${a.filter(t => t.type === "INC").length}</span><span>Requests ${a.filter(t => t.type === "REQ").length}</span></div></div>`;
 
+function mineHtml() {
+  const q = F.q.toLowerCase(), rows = T.filter(t => !q || [t.title, code(t)].join(" ").toLowerCase().includes(q)), pend = rows.filter(t => t.status === "closed" && !t.csat);
+  return `<div class="vh"><div><h1>My tickets</h1><div class="sub">Raise a ticket and follow it here. It goes straight to the engineer for the location you choose.</div></div></div>` +
+    (pend.length ? `<div class="banner" style="margin:0 0 16px">${pend.map(t => `<div>${code(t)} is closed. <button class="btn" data-open="1" data-id="${esc(t.id)}">Rate your experience</button></div>`).join("")}</div>` : "") +
+    `<div class="list">${listHtml(rows)}</div>`;
+}
+
 function render() {
   const scope = T.filter(t => F.site === "all" || t.location === F.site), op = scope.filter(isOpen), late = op.filter(t => slaText(t).late);
-  $("#nav").innerHTML = [["dash", "Dashboard"], ["INC", "Incidents"], ["REQ", "Service requests"], ["SLA", "SLA reports"]].map(([k, l]) =>
+  $("#nav").innerHTML = (ROLE === "user" ? [["mine", "My tickets"]] : [["dash", "Dashboard"], ["INC", "Incidents"], ["REQ", "Service requests"], ["SLA", "SLA reports"]]).map(([k, l]) =>
     `<button class="nav ${V === k ? "on" : ""}" data-nav="${k}"><span class="ni">${ic(k)}</span>${l}${k === "INC" || k === "REQ" ? `<em>${op.filter(t => t.type === k).length}</em>` : k === "SLA" && late.length ? `<em>${late.length}</em>` : ""}</button>`).join("");
+  if (ROLE === "user") V = "mine";
   let h;
-  if (V === "dash") {
-    const hr = new Date().getHours(), eng = {};
+  if (V === "mine") { h = mineHtml(); } else if (V === "dash") {
+    const hr = new Date().getHours(), eng = {}, rated = scope.filter(t => t.csat), avg = rated.length ? (rated.reduce((a, t) => a + t.csat, 0) / rated.length).toFixed(1) : null;
     op.forEach(t => { const k = t.assignee || "Unassigned"; eng[k] = (eng[k] || 0) + 1; });
-    h = `<h1>${hr < 12 ? "Good morning" : hr < 17 ? "Good afternoon" : "Good evening"}, ${esc(UN || "there")}</h1><div class="sub">Your IT overview for ${F.site === "all" ? "all locations" : esc(F.site)}</div>
+    h = `<h1>${hr < 12 ? "Good morning" : hr < 17 ? "Good afternoon" : "Good evening"}, ${esc(UN || "there")}</h1><div class="sub">Your IT overview for ${F.site === "all" ? "all locations" : esc(F.site)}. Customer satisfaction: ${avg ? avg + " of 5 from " + rated.length + " ratings" : "no ratings yet"}.</div>
     <div class="grid">${kpi("#4c6ef5", "dash", "Total tickets", scope)}${kpi("#f76707", "INC", "Open", scope.filter(t => t.status === "open"))}${kpi("#7048e8", "up", "In progress", scope.filter(t => t.status === "in_progress"))}${kpi("#2f9e44", "REQ", "Resolved or closed", scope.filter(t => !isOpen(t)))}${kpi("#e03131", "SLA", "Overdue", late)}${kpi("#0c8599", "usr", "Not assigned", op.filter(t => !t.assignee))}</div>
-    <div class="panels"><div class="panel"><h3>Open by priority</h3>${bars(["critical", "high", "medium", "low"].map(p => [PRI[p], op.filter(t => t.priority === p).length, { critical: "#e03131", high: "#f76707", medium: "#f59f00", low: "#2f9e44" }[p]]))}</div>
+    <div class="panels"><div class="panel"><h3>Open by priority</h3>${bars(["P1", "P2", "P3", "P4", "P5"].map(p => [PRI[p], op.filter(t => t.priority === p).length, { P1: "#e03131", P2: "#f76707", P3: "#f59f00", P4: "#4c6ef5", P5: "#2f9e44" }[p]]))}</div>
     <div class="panel"><h3>Open by location</h3>${bars(SITES.map(x => [x, op.filter(t => t.location === x).length, "#f26a1b"]))}</div>
     <div class="panel"><h3>Engineer workload</h3>${bars(Object.entries(eng).map(([k, n]) => [k, n, "#4c6ef5"]))}</div></div>
     <div class="panel"><h3>Latest open tickets</h3><div class="list" style="box-shadow:none;border:1px solid var(--line)">${listHtml(op.slice(0, 5))}</div></div>`;
@@ -212,45 +232,79 @@ function render() {
     h = `<div class="vh"><div><h1>SLA reports</h1><div class="sub">${late.length} overdue out of ${op.length} open tickets. Closest to breach first.</div></div></div><div class="list">${listHtml(rows)}</div>`;
   } else {
     const rows = filtered();
-    h = `<div class="vh"><div><h1>${V === "INC" ? "Incidents" : "Service requests"}</h1><div class="sub">${rows.length} shown</div></div><div class="seg">${[["open", "Active"], ["resolved", "Resolved"], ["all", "All"]].map(([k, l]) => `<button data-st="${k}" class="${F.status === k ? "on" : ""}">${l}</button>`).join("")}</div></div><div class="list">${listHtml(rows)}</div>`;
+    h = `<div class="vh"><div><h1>${V === "INC" ? "Incidents" : "Service requests"}</h1><div class="sub">${rows.length} shown</div></div><div class="seg">${[["open", "Active"], ["resolved", "Resolved or closed"], ["all", "All"]].map(([k, l]) => `<button data-st="${k}" class="${F.status === k ? "on" : ""}">${l}</button>`).join("")}</div></div><div class="list">${listHtml(rows)}</div>`;
   }
   $("#view").innerHTML = h;
 }
 
 function setTab(v) { F.type = v; V = v; }
+const engFor = loc => (STAFF.find(s => s.location === loc) || {}).name || "";
+function updateAuto() { $("#autoEng").value = engFor($("#newForm").location.value) || "Assigned by admin"; }
 
 function fillNewForm() {
   const f = $("#newForm"), type = f.type.value;
   f.category.innerHTML = CATS[type].map(c => `<option>${c}</option>`).join("");
   f.location.innerHTML = SITES.map(s => `<option>${esc(s)}</option>`).join("");
   if (F.site !== "all") f.location.value = F.site;
+  f.priority.innerHTML = (type === "INC" ? ["P1", "P2", "P3"] : ["P4", "P5"]).map(p => `<option value="${p}">${PRI[p]} (${SLA_TXT[p]})</option>`).join("");
+  updateAuto();
 }
 
 function openView(id) {
   const t = T.find(x => String(x.id) === id); if (!t) return;
-  const s = slaText(t);
-  $("#viewBody").innerHTML = `<h2>${esc(t.title)}</h2><div class="meta">${code(t)}, ${t.type === "INC" ? "Incident" : "Service request"}</div>
-  <dl><dt>Status</dt><dd><select id="stSel">${Object.entries(STAT).map(([k, v]) => `<option value="${k}" ${k === t.status ? "selected" : ""}>${v}</option>`).join("")}</select></dd>
-  <dt>Priority</dt><dd>${PRI[t.priority]}, ${s.s}</dd><dt>Location</dt><dd>${esc(t.location)}${t.spot ? ", " + esc(t.spot) : ""}</dd><dt>Seat number</dt><dd>${esc(t.seat_no) || "Not given"}</dd><dt>Asset ID</dt><dd>${esc(t.asset_id) || "Not given"}</dd>
-  <dt>Category</dt><dd>${esc(t.category)}</dd><dt>User</dt><dd>${esc(t.requester)}</dd><dt>Mobile</dt><dd>${esc(t.mobile) || "Not given"}</dd><dt>Email</dt><dd>${esc(t.contact) || "Not given"}</dd>
-  <dt>Engineer</dt><dd><input id="asg" list="engs" value="${esc(t.assignee)}" placeholder="Assign an engineer"></dd>
-  <dt>Details</dt><dd>${esc(t.description) || "None provided"}</dd>
-  <dt>Logged</dt><dd>${new Date(t.created_at).toLocaleString()}</dd></dl>
-  <div class="acts"><button class="btn" id="closeView">Close</button><button class="btn p" id="saveView" data-id="${esc(t.id)}">Save changes</button></div>`;
+  RATE = 0;
+  const adm = ROLE === "admin", step = (l, at) => `<li class="${at ? "done" : ""}"><b>${l}</b><span>${at ? new Date(at).toLocaleString() : "Pending"}</span></li>`;
+  const cm = (t.comments || []).map(c => `<div class="cm"><b>${esc(c.by)}</b> <span>${new Date(c.at).toLocaleString()}</span><div>${esc(c.text)}</div></div>`).join("") || `<div class="meta">No updates yet.</div>`;
+  const bt = (k, l, p) => `<button class="btn ${p ? "p" : ""}" data-act="${k}" data-id="${esc(t.id)}">${l}</button>`;
+  const rating = t.csat ? `<div class="meta">You rated this ${t.csat} of 5.</div>` : t.status === "closed" ? `<div><b>How did we do?</b><div class="stars">${[1, 2, 3, 4, 5].map(n => `<button class="star" data-rate="${n}" aria-label="${n} stars">&#9733;</button>`).join("")}</div></div><label>Comment (optional)<textarea id="cc" rows="2"></textarea></label><div class="acts"><button class="btn p" data-send="${esc(t.id)}">Send rating</button></div>` : "";
+  $("#viewBody").innerHTML = `<h2>${esc(t.title)}</h2><div class="meta">${code(t)}, ${t.type === "INC" ? "Incident" : "Service request"}, ${PRI[t.priority]}</div>
+  <ol class="tl">${step("Raised", t.created_at)}${step("Acknowledged", t.acknowledged_at)}${step("Resolved", t.resolved_at)}${step("Closed", t.closed_at)}</ol>
+  <dl><dt>SLA</dt><dd>${SLA[t.priority][0] ? "Respond within " + fmtMin(SLA[t.priority][0]) + ", " : ""}fix within ${fmtMin(SLA[t.priority][1])}. Now: ${slaLine(t).s}</dd>
+  <dt>Location</dt><dd>${esc(t.location)}${t.spot ? ", " + esc(t.spot) : ""}</dd><dt>Seat, asset</dt><dd>${esc(t.seat_no) || "Not given"}, ${esc(t.asset_id) || "not given"}</dd>
+  <dt>User</dt><dd>${esc(t.requester)}, ${esc(t.mobile) || "no mobile"}${t.contact ? ", " + esc(t.contact) : ""}</dd>
+  <dt>Engineer</dt><dd>${adm ? `<input id="asg" list="engs" value="${esc(t.assignee)}" placeholder="Assign an engineer">` : esc(t.assignee) || "Being assigned"}</dd>
+  <dt>Details</dt><dd>${esc(t.description) || "None provided"}</dd></dl>
+  <div><b>Updates</b>${cm}</div>
+  ${adm ? `<label>Update or resolution note<textarea id="cmt" rows="3" placeholder="What was checked or fixed?"></textarea></label>
+  <div class="acts"><button class="btn" id="closeView">Cancel</button>${bt("note", "Save update")}${t.status === "open" ? bt("ack", "Acknowledge", 1) : ""}${t.status === "open" || t.status === "in_progress" ? bt("res", "Resolve", 1) : ""}${t.status === "resolved" ? bt("close", "Close ticket", 1) : ""}</div>`
+  : `${rating}<div class="acts"><button class="btn" id="closeView">Close window</button></div>`}`;
   $("#viewDlg").showModal();
 }
 
-async function saveView(id) {
-  const patch = { status: $("#stSel").value, assignee: $("#asg").value.trim() };
-  if (!demo) { const { error } = await db.from(TBL).update(patch).eq("id", id); if (error) return toast("Save failed: " + error.message); }
-  Object.assign(T.find(x => String(x.id) === id), patch);
-  $("#viewDlg").close(); render(); toast("Changes saved");
+async function patchTicket(id, patch) {
+  if (!demo) { const { error } = await db.from(TBL).update(patch).eq("id", id); if (error) { toast("Save failed: " + error.message); return false; } }
+  Object.assign(T.find(x => String(x.id) === id), patch); return true;
+}
+
+async function act(id, kind) {
+  const t = T.find(x => String(x.id) === id), txt = $("#cmt").value.trim(), now = new Date().toISOString(), patch = {};
+  if (kind === "ack") { patch.status = "in_progress"; patch.acknowledged_at = now; }
+  if (kind === "res") { if (!txt) return toast("Add a note describing the fix before resolving"); patch.status = "resolved"; patch.resolved_at = now; if (!t.acknowledged_at) patch.acknowledged_at = now; }
+  if (kind === "close") { patch.status = "closed"; patch.closed_at = now; }
+  const asg = $("#asg").value.trim(); if (asg !== (t.assignee || "")) patch.assignee = asg;
+  if (txt) patch.comments = [...(t.comments || []), { by: UN, text: txt, at: now }];
+  if (!Object.keys(patch).length) return toast("Nothing to save yet");
+  if (!await patchTicket(id, patch)) return;
+  $("#viewDlg").close(); render();
+  toast(kind === "close" ? "Ticket closed. The user can now rate the service" : "Saved");
+}
+
+async function sendRating(id) {
+  if (!RATE) return toast("Choose a star rating first");
+  if (!await patchTicket(id, { csat: RATE, csat_comment: ($("#cc").value || "").trim() })) return;
+  RATE = 0; $("#viewDlg").close(); render(); toast("Thanks for your feedback");
+}
+
+function swapRole(b) {
+  ROLE = ROLE === "user" ? "admin" : "user"; UN = ROLE === "admin" ? ENGINEERS[0] : "Demo user";
+  V = ROLE === "user" ? "mine" : "dash"; $("#exp").hidden = ROLE === "user";
+  b.lastChild.textContent = ROLE === "user" ? "Preview as engineer" : "Preview as user"; showUser(); render();
 }
 
 async function createTicket(e) {
   e.preventDefault();
   const f = $("#newForm"), d = Object.fromEntries(new FormData(f));
-  const rec = { type: d.type, title: d.title.trim(), description: d.description.trim(), location: d.location, spot: d.spot.trim(), seat_no: d.seat_no.trim(), asset_id: d.asset_id.trim(), category: d.category, priority: d.priority, requester: d.requester.trim(), mobile: d.mobile.trim(), contact: d.contact.trim(), assignee: d.assignee.trim(), status: "open" };
+  const rec = { type: d.type, title: d.title.trim(), description: d.description.trim(), location: d.location, spot: d.spot.trim(), seat_no: d.seat_no.trim(), asset_id: d.asset_id.trim(), category: d.category, priority: d.priority, requester: d.requester.trim(), mobile: d.mobile.trim(), contact: d.contact.trim(), assignee: engFor(d.location), status: "open" };
   $("#saveNew").disabled = true; $("#newErr").textContent = "";
   if (demo) { T.unshift({ ...rec, id: "d" + Date.now(), number: T.length + 1, created_at: new Date().toISOString() }); }
   else {
@@ -266,7 +320,7 @@ function exportData(kind) {
   if (!rows.length) return toast("Nothing to export with these filters");
   const stamp = new Date().toISOString().slice(0, 10);
   if (kind === "json") return save(`tickets-${stamp}.json`, "application/json", JSON.stringify(rows, null, 2));
-  const cols = ["number", "type", "title", "status", "priority", "category", "location", "spot", "seat_no", "asset_id", "requester", "mobile", "contact", "assignee", "description", "created_at"];
+  const cols = ["number", "type", "title", "status", "priority", "category", "location", "spot", "seat_no", "asset_id", "requester", "mobile", "contact", "assignee", "description", "acknowledged_at", "resolved_at", "closed_at", "csat", "created_at"];
   const cell = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
   const csv = [cols.join(","), ...rows.map(r => cols.map(c => cell(c === "number" ? code(r) : r[c])).join(","))].join("\r\n");
   save(`tickets-${stamp}.csv`, "text/csv;charset=utf-8", "\ufeff" + csv);
@@ -281,29 +335,38 @@ async function boot() {
   $("#engs").innerHTML = ENGINEERS.map(e => `<option value="${esc(e)}">`).join("");
   if (demo) {
     $("#banner").innerHTML = `<div class="banner">Demo mode: data resets on refresh. Add your Supabase URL and anon key at the top of the script to save tickets permanently.</div>`;
-    UN = "Demo user"; showUser();
+    UN = "Demo user"; STAFF = SITES.map((x, i) => ({ name: ENGINEERS[i % ENGINEERS.length], location: x }));
+    $("#me").insertAdjacentHTML("beforebegin", '<button class="nav" id="swap"><span class="ni">&#8644;</span>Preview as engineer</button>'); showUser();
   } else {
     db = supabase.createClient(CFG.url, CFG.key);
     const { data: { session } } = await db.auth.getSession();
     if (!session) { $("#authDlg").showModal(); return; }
-    UN = session.user.email.split("@")[0]; showUser();
+    UN = session.user.email.split("@")[0];
+    const { data: st } = await db.from("deskline_staff").select("*"); STAFF = st || [];
+    const me = STAFF.find(x => x.email.toLowerCase() === session.user.email.toLowerCase());
+    if (me) { ROLE = "admin"; MYLOC = me.location; UN = me.name; }
+    showUser();
   }
-  await load(); render();
+  $("#exp").hidden = ROLE === "user"; V = ROLE === "user" ? "mine" : "dash"; await load(); render();
 }
 
 document.addEventListener("click", e => {
   const c = e.target.closest("button"); if (!c) return;
   if (c.dataset.nav) { V = c.dataset.nav; if (V === "INC" || V === "REQ") F.type = V; render(); }
   else if (c.dataset.st) { F.status = c.dataset.st; render(); }
+  else if (c.dataset.open) openView(c.dataset.id);
+  else if (c.dataset.act) act(c.dataset.id, c.dataset.act);
+  else if (c.dataset.rate) { RATE = +c.dataset.rate; document.querySelectorAll(".star").forEach(b => b.classList.toggle("on", +b.dataset.rate <= RATE)); }
+  else if (c.dataset.send) sendRating(c.dataset.send);
+  else if (c.id === "swap") swapRole(c);
   else if (c.classList.contains("t")) openView(c.dataset.id);
   else if (c.id === "newBtn") { $("#newForm").type.value = F.type; fillNewForm(); $("#newDlg").showModal(); }
   else if (c.id === "cancelNew") $("#newDlg").close();
   else if (c.id === "closeView") $("#viewDlg").close();
-  else if (c.id === "saveView") saveView(c.dataset.id);
   else if (c.id === "out") (db ? db.auth.signOut() : Promise.resolve()).then(() => location.reload());
   else if (c.id === "signUp") authDo("signUp");
 });
-$("#newForm").addEventListener("change", e => { if (e.target.name === "type") fillNewForm(); });
+$("#newForm").addEventListener("change", e => { if (e.target.name === "type") fillNewForm(); if (e.target.name === "location") updateAuto(); });
 $("#newForm").addEventListener("submit", createTicket);
 $("#siteSel").onchange = e => { F.site = e.target.value; render(); };
 $("#q").oninput = e => { F.q = e.target.value; render(); };
